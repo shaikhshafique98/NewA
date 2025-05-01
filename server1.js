@@ -172,6 +172,9 @@ app.get('/med', (req, res) => {
 
 
 // ---- Document section ) 
+// right after you do `app.use(cors());`
+app.use(express.json());    // <-- add this
+
 // Get all documents
 app.get('/documents', (req, res) => {
   const sql = 'SELECT * FROM documents';
@@ -182,7 +185,8 @@ app.get('/documents', (req, res) => {
 });
 
 // Delete a document
-app.post('/documents/delete', express.json(), (req, res) => {
+// (you can now remove the inline express.json() here if you want)
+app.post('/documents/delete', (req, res) => {
   const { id } = req.body;
   if (!id) return res.status(400).json({ error: 'Document ID is required' });
 
@@ -193,10 +197,12 @@ app.post('/documents/delete', express.json(), (req, res) => {
   });
 });
 
-// Edit a document name
+// Edit a document name & number
 app.post('/documents/edit', (req, res) => {
   const { id, new_name, new_number } = req.body;
-  if (!id || !new_name) return res.status(400).json({ error: 'ID and new_name are required' });
+  if (!id || !new_name) {
+    return res.status(400).json({ error: 'ID and new_name are required' });
+  }
 
   const sql = 'UPDATE documents SET doc_name = ?, doc_num = ? WHERE id = ?';
   db.query(sql, [new_name, new_number, id], (err, result) => {
