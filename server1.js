@@ -282,21 +282,24 @@ app.post('/checkgenerateotp', (req, res) => {
 
 
 //generate otp
-app.post('/generateotp', (req, res) => {
-  const { user_id, otp } = req.body;
-  const currentTime = new Date(); // Use full timestamp
-  const formattedTime = currentTime.toISOString().slice(0, 19).replace('T', ' ');
+app.post("/generateotp", (req, res) => {
+  const { user_ID, otp, time } = req.body;
+  console.log("Received OTP Data:", { user_ID, otp, time }); // Debug line
 
-  const sql = 'INSERT INTO otp (user_id, otp, time) VALUES (?, ?, ?)';
-  db.query(sql, [user_id, otp, formattedTime], (err, result) => {
+  if (!user_ID || !otp || !time) {
+    return res.status(400).send("Missing fields");
+  }
+
+  const sql = "INSERT INTO otp (user_id, otp, time) VALUES (?, ?, ?)";
+  db.query(sql, [user_ID, otp, time], (err, result) => {
     if (err) {
-      console.error('Error generating OTP:', err);
-      res.status(500).json({ error: 'Failed to generate OTP' });
-    } else {
-      res.status(200).json({ message: 'OTP generated successfully' });
+      console.error("DB Error inserting OTP:", err);
+      return res.status(500).send("Failed to insert OTP");
     }
+    res.status(200).send("OTP inserted successfully");
   });
 });
+
 
 
 
