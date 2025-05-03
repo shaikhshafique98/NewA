@@ -272,7 +272,7 @@ app.post('/checkgenerateotp', (req, res) => {
 //generate otp
 app.post('/generateotp', (req, res) => {
   const { user_ID, otp, time } = req.body;
-  db.query('INSERT INTO otp (user_ID, otp, time) VALUES (?, ?, ?)', [user_ID, otp, time], (err, result) => {
+  db.query('INSERT INTO otp (user_id, otp, time) VALUES (?, ?, ?)', [user_ID, otp, time], (err, result) => {
     if (err) return res.status(500).json({ error: 'DB error' });
     res.json({ success: true });
   });
