@@ -232,8 +232,7 @@ app.post('/signup', (req, res) => {
 
   const user_ID = generateUserID();
   const otp_ver = 'N';
-  const ID = '';
-  
+
   const checkSql = 'SELECT * FROM users WHERE email = ? OR mobile = ? OR user_ID = ?';
   db.query(checkSql, [email, mobile, user_ID], (err, results) => {
     if (err) return res.status(500).json({ error: 'Database error' });
@@ -241,13 +240,14 @@ app.post('/signup', (req, res) => {
       return res.status(409).json({ error: 'User already exists.' });
     }
 
-    const insertSql = 'INSERT INTO users (ID,user_ID, name, email, mobile, password, otp_ver) VALUES (?,?, ?, ?, ?, ?, ?)';
-    db.query(insertSql, [ID,user_ID, name, email, mobile, password, otp_ver], (err) => {
+    const insertSql = 'INSERT INTO users (user_ID, name, email, mobile, password, otp_ver) VALUES (?, ?, ?, ?, ?, ?)';
+    db.query(insertSql, [user_ID, name, email, mobile, password, otp_ver], (err) => {
       if (err) return res.status(500).json({ error: 'Insert failed' });
       res.json({ message: 'Signup successful', user_ID, name, mobile });
     });
   });
 });
+
 
 
 
