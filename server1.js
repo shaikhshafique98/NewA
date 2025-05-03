@@ -1,4 +1,7 @@
 // server.js
+const nodemailer = require('nodemailer');
+
+
 const express = require('express');
 const mysql   = require('mysql');
 const cors    = require('cors');
@@ -248,6 +251,61 @@ app.post('/signup', (req, res) => {
   });
 });
 
+
+// otp section
+//check if otp generate 3 mins ago 
+app.post('/checkgenerateotp', (req, res) => {
+  const { user_ID } = req.body;
+  db.query('SELECT time FROM otp WHERE user_ID = ? ORDER BY id DESC LIMIT 1', [user_ID], (err, results) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    if (results.length > 0) {
+      const lastTime = results[0].time;
+      const [lastHour, lastMinute] = lastTime.split(':').map(Number);
+      const now = new Date();
+      const diff = now.getHours() * 60 + now.getMinutes() - (lastHour * 60 + lastMinute);
+      return res.json({ recent: diff < 3 });
+    }
+    res.json({ recent: false });
+  });
+});
+
+//generate otp
+app.post('/generateotp', (req, res) => {
+  const { user_ID, otp, time } = req.body;
+  db.query('INSERT INTO otp (user_ID, otp, time) VALUES (?, ?, ?)', [user_ID, otp, time], (err, result) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    res.json({ success: true });
+  });
+});
+
+//email sending if otp is correct
+app.post('/sendmail', (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: 'Missing email or OTP' });
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'arogyasevi@gmail.com',
+      pass: 'Enter@123', // Use Gmail App Password
+    },
+  });
+
+  const mailOptions = {
+    from: 'Enter@123',
+    to: email,
+    subject: 'Your OTP Code for Aroyasevi',
+    text: `Your OTP code for completing registeration is: ${otp}`,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error('Email error:', error);
+      return res.status(500).json({ error: 'Email sending failed' });
+    }
+    res.json({ success: true, message: 'Email sent' });
+  });
+});
 
 
 
