@@ -215,6 +215,40 @@ app.post('/documents/edit', (req, res) => {
 });
 
 
+// signup section 
+const crypto = require('crypto');
+
+function generateUserID() {
+  const digits = Math.floor(10000 + Math.random() * 90000); // 5 digits
+  const letter = String.fromCharCode(65 + Math.floor(Math.random() * 26)); // A-Z
+  return `AS${digits}${letter}`;
+}
+
+app.post('/signup', (req, res) => {
+  const { name, email, mobile, password } = req.body;
+  if (!name || !email || !mobile || !password) {
+    return res.status(400).json({ error: 'All fields are required.' });
+  }
+
+  const user_ID = generateUserID();
+  const otp_ver = 'N';
+  const ID = '';
+  
+  const checkSql = 'SELECT * FROM users WHERE email = ? OR mobile = ? OR user_ID = ?';
+  db.query(checkSql, [email, mobile, user_ID], (err, results) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (results.length > 0) {
+      return res.status(409).json({ error: 'User already exists.' });
+    }
+
+    const insertSql = 'INSERT INTO users (ID,user_ID, name, email, mobile, password, otp_ver) VALUES (?,?, ?, ?, ?, ?, ?)';
+    db.query(insertSql, [ID,user_ID, name, email, mobile, password, otp_ver], (err) => {
+      if (err) return res.status(500).json({ error: 'Insert failed' });
+      res.json({ message: 'Signup successful', user_ID, name, mobile });
+    });
+  });
+});
+
 
 
 
