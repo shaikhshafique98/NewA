@@ -255,28 +255,50 @@ app.post('/signup', (req, res) => {
 // otp section
 //check if otp generate 3 mins ago 
 app.post('/checkgenerateotp', (req, res) => {
-  const { user_ID } = req.body;
-  db.query('SELECT time FROM otp WHERE user_ID = ? ORDER BY id DESC LIMIT 1', [user_ID], (err, results) => {
-    if (err) return res.status(500).json({ error: 'DB error' });
-    if (results.length > 0) {
-      const lastTime = results[0].time;
-      const [lastHour, lastMinute] = lastTime.split(':').map(Number);
-      const now = new Date();
-      const diff = now.getHours() * 60 + now.getMinutes() - (lastHour * 60 + lastMinute);
-      return res.json({ recent: diff < 3 });
+  const { user_id } = req.body;
+  const sql = 'SELECT * FROM otp_table WHERE user_id = ? ORDER BY id DESC LIMIT 1';
+
+  db.query(sql, [user_id], (err, result) => {
+    if (err) {
+      console.error('Error checking OTP:', err);
+      res.status(500).json({ error: 'Failed to check OTP' });
+    } else if (result.length > 0) {
+      const lastOtpTime = new Date(result[0].time);
+      const currentTime = new Date();
+
+      const diffMs = currentTime.getTime() - lastOtpTime.getTime();
+      const diffMins = diffMs / (1000 * 60);
+
+      if (diffMins < 3) {
+        res.status(200).json({ message: 'OTP already generated recently' });
+      } else {
+        res.status(200).json({ message: 'OTP can be generated' });
+      }
+    } else {
+      res.status(200).json({ message: 'No OTP found, can be generated' });
     }
-    res.json({ recent: false });
   });
 });
 
+
 //generate otp
 app.post('/generateotp', (req, res) => {
-  const { user_ID, otp, time } = req.body;
-  db.query('INSERT INTO otp (user_id, otp, time) VALUES (?, ?, ?)', [user_ID, otp, time], (err, result) => {
-    if (err) return res.status(500).json({ error: 'DB error' });
-    res.json({ success: true });
+  const { user_id, otp } = req.body;
+  const currentTime = new Date(); // Use full timestamp
+  const formattedTime = currentTime.toISOString().slice(0, 19).replace('T', ' ');
+
+  const sql = 'INSERT INTO otp_table (user_id, otp, time) VALUES (?, ?, ?)';
+  db.query(sql, [user_id, otp, formattedTime], (err, result) => {
+    if (err) {
+      console.error('Error generating OTP:', err);
+      res.status(500).json({ error: 'Failed to generate OTP' });
+    } else {
+      res.status(200).json({ message: 'OTP generated successfully' });
+    }
   });
 });
+
+
 
 //email sending if otp is correct
 app.post('/sendmail', (req, res) => {
