@@ -256,7 +256,7 @@ app.post('/signup', (req, res) => {
 //check if otp generate 3 mins ago 
 app.post('/checkgenerateotp', (req, res) => {
   const { user_id } = req.body;
-  const sql = 'SELECT * FROM otp_table WHERE user_id = ? ORDER BY id DESC LIMIT 1';
+  const sql = 'SELECT * FROM otp WHERE user_id = ? ORDER BY id DESC LIMIT 1';
 
   db.query(sql, [user_id], (err, result) => {
     if (err) {
@@ -287,7 +287,7 @@ app.post('/generateotp', (req, res) => {
   const currentTime = new Date(); // Use full timestamp
   const formattedTime = currentTime.toISOString().slice(0, 19).replace('T', ' ');
 
-  const sql = 'INSERT INTO otp_table (user_id, otp, time) VALUES (?, ?, ?)';
+  const sql = 'INSERT INTO otp (user_id, otp, time) VALUES (?, ?, ?)';
   db.query(sql, [user_id, otp, formattedTime], (err, result) => {
     if (err) {
       console.error('Error generating OTP:', err);
