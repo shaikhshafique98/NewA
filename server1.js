@@ -32,13 +32,13 @@ db.connect(err => {
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'arog@gmail@gmail.com',
-    pass: 'gkwt emyk thwh bbeb'
+    user: 'arogyasevi@gmail.com',
+    pass: 'gkwtemykthwhbbeb'
   }
 });
 function sendOtpEmail(to, otp) {
   transporter.sendMail({
-    from: 'arog@gmail@gmail',
+    from: '"Arogya App" <arogyasevi@gmail.com>', 
     to,
     subject: 'Your OTP Code',
     text: `Your OTP code is: ${otp}`
