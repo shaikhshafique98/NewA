@@ -33,7 +33,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'arog@gmail@gmail.com',
-    pass: 'Enter@123'
+    pass: 'gkwt emyk thwh bbeb'
   }
 });
 function sendOtpEmail(to, otp) {
