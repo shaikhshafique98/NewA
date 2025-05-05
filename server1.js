@@ -28,6 +28,28 @@ db.connect(err => {
   console.log('Connected to MySQL.');
 });
 
+// Mailer setup
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'arog@gmail@gmail.com',
+    pass: 'Enter@123'
+  }
+});
+function sendOtpEmail(to, otp) {
+  transporter.sendMail({
+    from: 'arog@gmail@gmail',
+    to,
+    subject: 'Your OTP Code',
+    text: `Your OTP code is: ${otp}`
+  }, (err, info) => {
+    if (err) console.error('Email error:', err);
+    else console.log('Email sent:', info.response);
+  });
+}
+
+
+
 app.get('/labs', (req, res) => {
   const { city, search } = req.query;
 
@@ -252,88 +274,85 @@ app.post('/signup', (req, res) => {
 });
 
 
-// otp section
-//check if otp generate 3 mins ago 
-app.post('/checkgenerateotp', (req, res) => {
-  const { user_id } = req.body;
-  const sql = 'SELECT * FROM otp WHERE user_id = ? ORDER BY id DESC LIMIT 1';
+// OTP section //
+// ——— OTP Endpoints using GET and req.query ———
 
-  db.query(sql, [user_id], (err, result) => {
-    if (err) {
-      console.error('Error checking OTP:', err);
-      res.status(500).json({ error: 'Failed to check OTP' });
-    } else if (result.length > 0) {
-      const lastOtpTime = new Date(result[0].time);
-      const currentTime = new Date();
+// 1) Check if we generated an OTP in the last 3 minutes
+//    Example: GET /checkgenerateotp?user_ID=AS12345Z
+app.get('/checkgenerateotp', (req, res) => {
+  const userID = req.query.user_ID;
+  if (!userID) return res.status(400).json({ error: 'user_ID is required' });
 
-      const diffMs = currentTime.getTime() - lastOtpTime.getTime();
-      const diffMins = diffMs / (1000 * 60);
+  const sql = 'SELECT time FROM otp WHERE user_id = ? ORDER BY id DESC LIMIT 1';
+  db.query(sql, [userID], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.sqlMessage });
 
-      if (diffMins < 3) {
-        res.status(200).json({ message: 'OTP already generated recently' });
-      } else {
-        res.status(200).json({ message: 'OTP can be generated' });
-      }
-    } else {
-      res.status(200).json({ message: 'No OTP found, can be generated' });
+    if (rows.length) {
+      const lastTime    = new Date(rows[0].time);
+      const diffMinutes = (Date.now() - lastTime.getTime()) / 60000;
+      return res.json({ recent: diffMinutes < 3 });
     }
+    res.json({ recent: false });
   });
 });
 
-
-//generate otp
-app.post("/generateotp", (req, res) => {
-  const { user_ID, otp, time } = req.body;
-
-  console.log("Received data:", { user_ID, otp, time }); // Full logging
-
-  if (!user_ID || !otp || !time) {
-    console.log("Missing data fields");
-    return res.status(400).send("Missing fields: user_ID, otp, or time");
+// 2) Generate & store a new OTP
+//    Example: GET /generateotp?user_ID=AS12345Z&otp=1234
+app.get('/generateotp', (req, res) => {
+  const { user_ID: userID, otp } = req.query;
+  if (!userID || !otp) {
+    return res.status(400).json({ error: 'user_ID and otp are required' });
   }
 
-  const sql = "INSERT INTO otp (user_id, otp, time) VALUES (?, ?, ?)";
-  db.query(sql, [user_ID, otp, time], (err, result) => {
-    if (err) {
-      console.error("Error inserting OTP:", err.sqlMessage);
-      return res.status(500).send("Database error: " + err.sqlMessage);
+  const now     = new Date();
+  const sqlTime = now.toISOString().slice(0, 19).replace('T', ' ');
+
+  db.query(
+    'INSERT INTO otp (user_id, otp, time) VALUES (?, ?, ?)',
+    [userID, otp, sqlTime],
+    (err) => {
+      if (err) return res.status(500).json({ error: err.sqlMessage });
+
+      // fetch user email and send OTP
+      db.query(
+        'SELECT email FROM user_info WHERE user_ID = ?',
+        [userID],
+        (e2, users) => {
+          if (!e2 && users.length) {
+            sendOtpEmail(users[0].email, otp);
+          }
+        }
+      );
+
+      res.json({ success: true });
     }
-    console.log("OTP inserted successfully");
-    res.status(200).send("OTP inserted");
-  });
+  );
 });
 
+// 3) Validate OTP
+//    Example: GET /validateotp?user_ID=AS12345Z&enteredOtp=1234
+app.get('/validateotp', (req, res) => {
+  const { user_ID: userID, enteredOtp } = req.query;
+  if (!userID || !enteredOtp) {
+    return res.status(400).json({ error: 'user_ID and enteredOtp are required' });
+  }
 
+  db.query(
+    'SELECT otp FROM otp WHERE user_id = ? ORDER BY id DESC LIMIT 1',
+    [userID],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.sqlMessage });
 
-
-//email sending if otp is correct
-app.post('/sendmail', (req, res) => {
-  const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ error: 'Missing email or OTP' });
-
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: 'arogyasevi@gmail.com',
-      pass: 'Enter@123', // Use Gmail App Password
-    },
-  });
-
-  const mailOptions = {
-    from: 'Enter@123',
-    to: email,
-    subject: 'Your OTP Code for Aroyasevi',
-    text: `Your OTP code for completing registeration is: ${otp}`,
-  };
-
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error('Email error:', error);
-      return res.status(500).json({ error: 'Email sending failed' });
+      if (rows.length && rows[0].otp === enteredOtp) {
+        // delete the used OTP
+        db.query('DELETE FROM otp WHERE user_id = ?', [userID], () => {});
+        return res.json({ valid: true });
+      }
+      res.json({ valid: false });
     }
-    res.json({ success: true, message: 'Email sent' });
-  });
+  );
 });
+
 
 
 
