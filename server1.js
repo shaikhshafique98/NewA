@@ -308,6 +308,42 @@ app.post('/signup', (req, res) => {
 });
 
 
+// Login section //
+// Login endpoint
+app.post('/login', (req, res) => {
+  const { identifier, password } = req.body;
+  if (!identifier || !password) {
+    return res.status(400).json({ error: 'Identifier and password are required.' });
+  }
+
+  // Look up by email OR mobile OR user_ID
+  const sql = `
+    SELECT user_ID, name, email, mobile 
+    FROM user_info 
+    WHERE (email = ? OR mobile = ? OR user_ID = ?)
+      AND password = ?
+    LIMIT 1
+  `;
+  db.query(sql, [identifier, identifier, identifier, password], (err, results) => {
+    if (err) return res.status(500).json({ error: 'Database error.' });
+    if (results.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
+
+    // Success: send back the user record
+    const user = results[0];
+    res.json({
+      user_ID: user.user_ID,
+      name:    user.name,
+      email:   user.email,
+      mobile:  user.mobile
+    });
+  });
+});
+
+
+
+
 // OTP section //
 // ——— OTP Endpoints using GET and req.query ———
 
