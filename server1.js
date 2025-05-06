@@ -13,6 +13,8 @@ const PORT = 3000;
 
 // Enable CORS
 app.use(cors());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 
 // Nodemailer setup
