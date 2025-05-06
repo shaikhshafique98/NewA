@@ -5,12 +5,25 @@ const nodemailer = require('nodemailer');
 const express = require('express');
 const mysql   = require('mysql');
 const cors    = require('cors');
-
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const path = require('path');
 const app = express();
 const PORT = 3000;
 
 // Enable CORS
 app.use(cors());
+
+
+// Nodemailer setup
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'arogyasevi@gmail.com',
+    pass: 'gkwtemykthwhbbeb' // App password
+  }
+});
+
 
 // MySQL connection setup
 const db = mysql.createConnection({
@@ -28,25 +41,42 @@ db.connect(err => {
   console.log('Connected to MySQL.');
 });
 
-// Mailer setup
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'arogyasevi@gmail.com',
-    pass: 'gkwtemykthwhbbeb'
+
+app.post('/sendmail', (req, res) => {
+  const { email, otp } = req.body;
+
+  // OPTIONAL: Use external HTML template file
+  const templatePath = path.join(__dirname, 'otp_template.html');
+  let htmlTemplate = `<h2>Your OTP Code</h2><p style="font-size:18px;"><strong>${otp}</strong></p><p>Use this code to complete your verification. It is valid for 3 minutes.</p>`;
+
+  // If external file exists, use it
+  if (fs.existsSync(templatePath)) {
+    htmlTemplate = fs.readFileSync(templatePath, 'utf-8').replace('{{OTP}}', otp);
   }
-});
-function sendOtpEmail(to, otp) {
-  transporter.sendMail({
-    from: '"Arogya App" <arogyasevi@gmail.com>', 
-    to,
+
+  const mailOptions = {
+    from: '"Arogya App" <arog@gmail.com>',
+    to: email,
     subject: 'Your OTP Code',
-    text: `Your OTP code is: ${otp}`
-  }, (err, info) => {
-    if (err) console.error('Email error:', err);
-    else console.log('Email sent:', info.response);
+    html: htmlTemplate
+  };
+
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('Email Error:', err);
+      return res.status(500).send('Failed to send email');
+    }
+    console.log('Email sent:', info.response);
+    res.send('OTP sent to email');
   });
-}
+});
+
+app.listen(3000, () => {
+  console.log('Server running on port 3000');
+});
+
+
+
 
 
 
