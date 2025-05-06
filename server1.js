@@ -1,20 +1,23 @@
 // server.js
 const nodemailer = require('nodemailer');
-
-
 const express = require('express');
 const mysql   = require('mysql');
 const cors    = require('cors');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
+
 const app = express();
 const PORT = 3000;
 
+const fs   = require('fs');
+const path = require('path');
+
+
 // Enable CORS
 app.use(cors());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true  }));
+
 
 
 // Nodemailer setup
@@ -330,59 +333,65 @@ app.get('/checkgenerateotp', (req, res) => {
 
 // 2) Generate & store a new OTP
 //    Example: GET /generateotp?user_ID=AS12345Z&otp=1234
-app.get('/generateotp', (req, res) => {
-  const { user_ID: userID, otp } = req.query;
-  if (!userID || !otp) {
-    return res.status(400).json({ error: 'user_ID and otp are required' });
-  }
+app.post('/generateotp', (req, res) => {
+  const { user_ID, otp, time, email } = req.body;
 
-  const now     = new Date();
-  const sqlTime = now.toISOString().slice(0, 19).replace('T', ' ');
-
-  db.query(
-    'INSERT INTO otp (user_id, otp, time) VALUES (?, ?, ?)',
-    [userID, otp, sqlTime],
-    (err) => {
-      if (err) return res.status(500).json({ error: err.sqlMessage });
-
-      // fetch user email and send OTP
-      db.query(
-        'SELECT email FROM user_info WHERE user_ID = ?',
-        [userID],
-        (e2, users) => {
-          if (!e2 && users.length) {
-            sendOtpEmail(users[0].email, otp);
-          }
-        }
-      );
-
-      res.json({ success: true });
+  // 1) Insert into DB
+  const sql = 'INSERT INTO otp (user_id, otp, time) VALUES (?, ?, ?)';
+  db.query(sql, [user_ID, otp, time], (err, result) => {
+    if (err) {
+      console.error('DB Insert Error:', err);
+      return res.status(500).send('Error saving OTP');
     }
-  );
+
+    // 2) If we have an email, send the OTP using the HTML template
+    if (email) {
+      // a) Load your HTML template from disk
+      const templatePath = path.join(__dirname, 'otp_template.html');
+      let html = fs.readFileSync(templatePath, 'utf8');
+
+      // b) Replace the placeholder with the actual OTP
+      html = html.replace('{{OTP}}', otp);
+
+      // c) Send the email
+      transporter.sendMail({
+        from: '"ArogyaSevi" <your_email@gmail.com>',
+        to: email,
+        subject: 'Your OTP Code',
+        html: html
+      }, (err, info) => {
+        if (err) {
+          console.error('Email error:', err);
+          return res.status(500).send('OTP saved, but email not sent');
+        }
+        console.log('Email sent:', info.response);
+        return res.send('OTP saved and email sent');
+      });
+
+    } else {
+      // no email provided
+      return res.send('OTP saved');
+    }
+  });
 });
+
 
 // 3) Validate OTP
 //    Example: GET /validateotp?user_ID=AS12345Z&enteredOtp=1234
-app.get('/validateotp', (req, res) => {
-  const { user_ID: userID, enteredOtp } = req.query;
-  if (!userID || !enteredOtp) {
-    return res.status(400).json({ error: 'user_ID and enteredOtp are required' });
-  }
-
-  db.query(
-    'SELECT otp FROM otp WHERE user_id = ? ORDER BY id DESC LIMIT 1',
-    [userID],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.sqlMessage });
-
-      if (rows.length && rows[0].otp === enteredOtp) {
-        // delete the used OTP
-        db.query('DELETE FROM otp WHERE user_id = ?', [userID], () => {});
-        return res.json({ valid: true });
-      }
-      res.json({ valid: false });
+app.post('/updateotpstatus', (req, res) => {
+  const { user_ID } = req.body;
+  const sql = 'UPDATE user_info SET otp_ver = ? WHERE user_ID = ?';
+  db.query(sql, ['Y', user_ID], (err, result) => {
+    if (err) {
+      console.error('Update Error:', err);
+      return res.status(500).send('Error updating OTP status');
     }
-  );
+    res.send('OTP verified');
+  });
+});
+
+app.listen(3000, () => {
+  console.log('Server running on port 3000');
 });
 
 
