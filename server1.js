@@ -430,6 +430,57 @@ app.listen(3000, () => {
 });
 
 
+//forgot pass block
+app.post('/forgotpassword', (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).send("Missing data");
+
+  const checkUserSql = "SELECT * FROM user_info WHERE email = ?";
+  con.query(checkUserSql, [email], (err, result) => {
+    if (err) return res.status(500).send("Server error");
+
+    if (result.length === 0) {
+      return res.status(404).send("Email not registered");
+    }
+
+    const updateSql = "UPDATE user_info SET password = ? WHERE email = ?";
+    con.query(updateSql, [password, email], (err2) => {
+      if (err2) return res.status(500).send("Failed to update password");
+
+
+
+      const htmlPath = path.join(__dirname, 'templates', 'forgotpass.html');
+fs.readFile(htmlPath, 'utf8', (err, html) => {
+  if (err) {
+    console.error('Failed to read HTML template', err);
+    return res.status(500).send('Template error');
+  }
+
+  const finalHtml = html.replace('{{password}}', password);
+
+  const mailOptions = {
+    from: 'ArogyaSevi@gmail.com',
+    to: email,
+    subject: 'Your New Password',
+    html: finalHtml
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error('Email failed:', error);
+      return res.status(500).send('Email failed');
+    }
+    console.log('Password email sent:', info.response);
+    return res.status(200).send('Password sent');
+  });
+});
+
+
+      });
+    });
+  });
+});
+
 
 
 
