@@ -15,6 +15,7 @@ const path = require('path');
 
 // Enable CORS
 app.use(cors());
+app.use(express.json());              // <— first JSON
 app.use(bodyParser.urlencoded({ extended: true  }));
 
 
@@ -432,6 +433,8 @@ app.listen(3000, () => {
 
 //forgot pass block
 app.post('/forgotpassword', (req, res) => {
+	  console.log('*** /forgotpassword body:', req.body);
+	  
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).send("Missing data");
 
