@@ -275,7 +275,7 @@ app.post('/documents/edit', (req, res) => {
 });
 
 
-// signup section 
+// Normal  Signup section 
 const crypto = require('crypto');
 
 function generateUserID() {
@@ -341,6 +341,54 @@ app.post('/login', (req, res) => {
     });
   });
 });
+
+
+// -----------------
+// GOOGLE AUTH FLOW
+// -----------------
+app.post('/googleAuth', (req, res) => {
+  const { name, email, photo, password } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  // 1) Check if user already exists by email
+  const checkSql = 'SELECT * FROM user_info WHERE email = ?';
+  db.query(checkSql, [email], (err, results) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+
+    if (results.length > 0) {
+      // 2a) Existing user → return their record
+      const user = results[0];
+      return res.json({
+        user_ID: user.user_ID,
+        name:    user.name,
+        email:   user.email,
+        mobile:  user.mobile
+      });
+    }
+
+    // 2b) New user → insert with IsGoogle='Y', otp_ver='Y', mobile=NULL
+    const user_ID = generateUserID();
+    const insertSql = `
+      INSERT INTO user_info 
+        (user_ID, name, email, mobile, password, otp_ver, profileimg, IsGoogle)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    db.query(insertSql, [
+      user_ID,
+      name,
+      email,
+      null,
+      password,
+      'Y',
+      photo,
+      'Y'
+    ], (err2) => {
+      if (err2) return res.status(500).json({ error: 'Insert failed' });
+      return res.json({ user_ID, name, email, mobile: null });
+    });
+  });
+});
+
 
 
 
