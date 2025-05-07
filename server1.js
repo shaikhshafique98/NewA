@@ -452,7 +452,7 @@ app.post('/forgotpassword', (req, res) => {
 
 
 
-      const htmlPath = path.join(__dirname, 'templates', 'forgotpass.html');
+      const htmlPath = path.join(__dirname,  'forgotpass.html');
 fs.readFile(htmlPath, 'utf8', (err, html) => {
   if (err) {
     console.error('Failed to read HTML template', err);
