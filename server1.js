@@ -479,7 +479,7 @@ fs.readFile(htmlPath, 'utf8', (err, html) => {
       });
     });
   });
-});
+
 
 
 
