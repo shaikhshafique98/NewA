@@ -439,7 +439,7 @@ app.post('/forgotpassword', (req, res) => {
   if (!email || !password) return res.status(400).send("Missing data");
 
   const checkUserSql = "SELECT * FROM user_info WHERE email = ?";
-  con.query(checkUserSql, [email], (err, result) => {
+  db.query(checkUserSql, [email], (err, result) => {
     if (err) return res.status(500).send("Server error");
 
     if (result.length === 0) {
@@ -447,7 +447,7 @@ app.post('/forgotpassword', (req, res) => {
     }
 
     const updateSql = "UPDATE user_info SET password = ? WHERE email = ?";
-    con.query(updateSql, [password, email], (err2) => {
+    db.query(updateSql, [password, email], (err2) => {
       if (err2) return res.status(500).send("Failed to update password");
 
 
