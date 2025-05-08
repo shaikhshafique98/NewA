@@ -525,14 +525,70 @@ fs.readFile(htmlPath, 'utf8', (err, html) => {
     return res.status(200).send('Password sent');
   });
 });
-
-
-      });
+  });
     });
   });
 
 
 
+// GET home user (simple GET, no JSON body)
+app.get('/homeUser', (req, res) => {
+  const user_ID = req.query.user_ID;
+  if (!user_ID) {
+    return res.status(400).send('user_ID is required');
+  }
+
+  const sql = `
+    SELECT user_ID, name, email, mobile, otp_ver, profileimg, IsGoogle
+      FROM user_info
+     WHERE user_ID = ?
+     LIMIT 1
+  `;
+  db.query(sql, [user_ID], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Database error');
+    }
+    if (!results.length) {
+      return res.status(404).send('User not found');
+    }
+    // Send back the row as a JSON string
+    res.json(results[0]);
+  });
+});
+
+
+
+// profile section 
+// GET user profile (joins user_info + profile)
+app.get('/profileUser', (req, res) => {
+  const user_ID = req.query.user_ID;
+  if (!user_ID) {
+    return res.status(400).send('user_ID is required');
+  }
+
+  const sql = `
+    SELECT 
+      ui.user_ID, ui.name, ui.email, ui.mobile, ui.otp_ver, ui.profileimg, ui.IsGoogle,
+      p.address, p.dob, p.gender      -- adjust these to your actual profile columns
+    FROM user_info AS ui
+    LEFT JOIN profile AS p
+      ON ui.user_ID = p.user_ID
+    WHERE ui.user_ID = ?
+    LIMIT 1
+  `;
+  db.query(sql, [user_ID], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Database error');
+    }
+    if (!results.length) {
+      return res.status(404).send('User not found');
+    }
+    // send back the row as JSON
+    res.json(results[0]);
+  });
+});
 
 
 // 404 handler
