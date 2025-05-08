@@ -570,7 +570,7 @@ app.get('/profileUser', (req, res) => {
   const sql = `
     SELECT 
       ui.user_ID, ui.name, ui.email, ui.mobile, ui.otp_ver, ui.profileimg, ui.IsGoogle,
-      p.address, p.dob, p.gender      -- adjust these to your actual profile columns
+      p.DOB, p.Gender,p.Blood,p.Disease,p.Allergies        -- adjust these to your actual profile columns
     FROM user_info AS ui
     LEFT JOIN profile AS p
       ON ui.user_ID = p.user_ID
