@@ -559,7 +559,8 @@ app.get('/homeUser', (req, res) => {
 
 
 
-// profile section 
+// ============ Profile section  ============  //
+///////////////////
 // GET user profile (joins user_info + profile)
 app.get('/profileUser', (req, res) => {
   const user_ID = req.query.user_ID;
@@ -587,6 +588,72 @@ app.get('/profileUser', (req, res) => {
     }
     // send back the row as JSON
     res.json(results[0]);
+  });
+});
+
+
+// Update profile
+// POST /updateProfile
+app.post('/updateProfile', (req, res) => {
+  const {
+    user_ID, name, email, mobile,
+    DOB, Gender, Blood, Disease, Allergies
+  } = req.body;
+
+  if (!user_ID) return res.status(400).send('user_ID is required');
+
+  // 1) Update user_info
+  const updUser = `
+    UPDATE user_info
+       SET name  = ?,
+           email = ?,
+           mobile= ?
+     WHERE user_ID = ?
+  `;
+  db.query(updUser, [name, email, mobile, user_ID], (err) => {
+    if (err) return res.status(500).send('Failed to update user_info');
+
+    // 2) Upsert profile table
+    const checkSql = 'SELECT 1 FROM profile WHERE user_ID = ?';
+    db.query(checkSql, [user_ID], (err2, rows) => {
+      if (err2) return res.status(500).send('Profile lookup failed');
+
+      if (rows.length) {
+        // already exists → UPDATE
+        const updProfile = `
+          UPDATE profile
+             SET DOB       = ?,
+                 Gender    = ?,
+                 Blood     = ?,
+                 Disease   = ?,
+                 Allergies = ?
+           WHERE user_ID = ?
+        `;
+        db.query(
+          updProfile,
+          [DOB, Gender, Blood, Disease, Allergies, user_ID],
+          err3 => {
+            if (err3) return res.status(500).send('Failed to update profile');
+            res.send('Profile updated');
+          }
+        );
+      } else {
+        // not exists → INSERT
+        const insProfile = `
+          INSERT INTO profile
+            (user_ID, DOB, Gender, Blood, Disease, Allergies)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        db.query(
+          insProfile,
+          [user_ID, DOB, Gender, Blood, Disease, Allergies],
+          err4 => {
+            if (err4) return res.status(500).send('Failed to insert profile');
+            res.send('Profile created');
+          }
+        );
+      }
+    });
   });
 });
 
