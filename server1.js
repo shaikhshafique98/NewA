@@ -657,6 +657,16 @@ app.post('/updateProfile', (req, res) => {
   });
 });
 
+// insert document //
+app.post('/insertDocument', (req, res) => {
+  const { userid, date, doc_name, doc_num, doc_link } = req.body;
+  const sql = `INSERT INTO documents (userid, date, doc_name, doc_num, doc_link) VALUES (?, ?, ?, ?, ?)`;
+  db.query(sql, [userid, date, doc_name, doc_num, doc_link], (err, result) => {
+    if (err) return res.status(500).json({ error: err });
+    res.json({ message: 'Document inserted successfully' });
+  });
+});
+
 
 // 404 handler
 app.use((req, res) => {
